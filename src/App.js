@@ -1,8 +1,6 @@
 import React, { Component } from "react";
 import axios from "axios";
 
-import authors from "./data.js";
-
 // Components
 import Sidebar from "./Sidebar";
 import SearchBar from "./SearchBar";
@@ -14,15 +12,25 @@ class App extends Component {
     super(props);
     this.state = {
       currentAuthor: {},
-      filteredAuthors: []
+      filteredAuthors: [],
+      authors: [],
+      loading: true
     };
+
     this.selectAuthor = this.selectAuthor.bind(this);
     this.unselectAuthor = this.unselectAuthor.bind(this);
     this.filterAuthors = this.filterAuthors.bind(this);
   }
 
-  selectAuthor(author) {
-    this.setState({ currentAuthor: author });
+  selectAuthor(authorID) {
+    this.setState({ loading: true });
+    axios
+      .get(`https://the-index-api.herokuapp.com/api/authors/${authorID}/`)
+      .then(res => res.data)
+      .then(incomingData =>
+        this.setState({ currentAuthor: incomingData, loading: false })
+      )
+      .catch(err => console.log(err));
   }
 
   unselectAuthor() {
@@ -31,7 +39,7 @@ class App extends Component {
 
   filterAuthors(query) {
     query = query.toLowerCase();
-    let filteredAuthors = authors.filter(author => {
+    let filteredAuthors = this.state.authors.filter(author => {
       return `${author.first_name} ${author.last_name}`.includes(query);
     });
     this.setState({ filteredAuthors: filteredAuthors });
@@ -40,16 +48,26 @@ class App extends Component {
   getContentView() {
     if (this.state.currentAuthor.first_name) {
       return <AuthorDetail author={this.state.currentAuthor} />;
-    } else if (this.state.filteredAuthors[0]) {
+    } else if (this.state.loading) {
+      return <h3>loading ... </h3>;
+    } else {
       return (
         <AuthorsList
-          authors={this.state.filteredAuthors}
+          authors={this.state.authors}
           selectAuthor={this.selectAuthor}
         />
       );
-    } else {
-      return <AuthorsList authors={authors} selectAuthor={this.selectAuthor} />;
     }
+  }
+
+  componentDidMount() {
+    axios
+      .get("https://the-index-api.herokuapp.com/api/authors/")
+      .then(res => res.data)
+      .then(incomingData =>
+        this.setState({ authors: incomingData, loading: false })
+      )
+      .catch(err => console.log(err));
   }
 
   render() {
